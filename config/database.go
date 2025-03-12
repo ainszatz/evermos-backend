@@ -14,28 +14,46 @@ import (
 var DB *gorm.DB
 
 func ConnectDB() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	// Load environment variables
+	if err := godotenv.Load(); err != nil {
+		log.Panicf("⚠ Error loading .env file: %v", err)
 	}
 
+	// Validasi env variable tidak kosong
+	requiredEnvVars := []string{"DB_USER", "DB_HOST", "DB_PORT", "DB_NAME"}
+	for _, v := range requiredEnvVars {
+		if os.Getenv(v) == "" {
+			log.Fatalf("⚠ Environment variable %s is not set", v)
+		}
+	}
+
+	// Format DSN (Data Source Name)
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		os.Getenv("DB_USER"), os.Getenv("DB_PASS"), os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"), os.Getenv("DB_NAME"))
 
+	// Connect ke Database
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Panicf("❌ Failed to connect to database: %v", err)
 	}
 
-	// Auto Migration
-	err = db.AutoMigrate(&models.User{}, &models.Store{}, &models.Address{},
-		&models.Category{}, &models.Product{}, &models.Transaction{}, &models.ProductLog{})
+	// Panggil fungsi untuk migrasi
+	MigrateDatabase(db)
 
-	if err != nil {
-		log.Fatal("Failed to migrate database:", err)
-	}
-
+	// Simpan koneksi database ke variabel global
 	DB = db
-	fmt.Println("Database connected and migrated successfully!")
+	fmt.Println("✅ Database connected and migrated successfully!")
+}
+
+// Fungsi untuk menjalankan AutoMigrate
+func MigrateDatabase(db *gorm.DB) {
+	err := db.AutoMigrate(
+		&models.User{}, &models.Store{}, &models.Address{},
+		&models.Category{}, &models.Product{}, &models.Transaction{},
+		&models.ProductLog{},
+	)
+	if err != nil {
+		log.Panicf("❌ Failed to migrate database: %v", err)
+	}
 }
