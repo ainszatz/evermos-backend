@@ -38,6 +38,7 @@ func main() {
 	routes.StoreRoutes(app)
 	routes.AddressRoutes(app)
 	routes.CategoryRoutes(app)
+	routes.ProductRoutes(app)
 
 
 	app.Get("/", func(c *fiber.Ctx) error {

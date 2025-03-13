@@ -19,14 +19,6 @@ func ConnectDB() {
 		log.Panicf("⚠ Error loading .env file: %v", err)
 	}
 
-	// Validasi env variable tidak kosong
-	requiredEnvVars := []string{"DB_USER", "DB_HOST", "DB_PORT", "DB_NAME"}
-	for _, v := range requiredEnvVars {
-		if os.Getenv(v) == "" {
-			log.Fatalf("⚠ Environment variable %s is not set", v)
-		}
-	}
-
 	// Format DSN (Data Source Name)
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		os.Getenv("DB_USER"), os.Getenv("DB_PASS"), os.Getenv("DB_HOST"),
