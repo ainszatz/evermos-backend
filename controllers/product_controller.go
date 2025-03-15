@@ -49,14 +49,61 @@ func CreateProduct(c *fiber.Ctx) error {
 func GetProducts(c *fiber.Ctx) error {
 	db := c.Locals("db").(*gorm.DB)
 
+	// ✅ Ambil query parameter untuk pagination
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * limit
+
+	// ✅ Ambil query parameter untuk filtering
+	name := c.Query("name")
+	categoryID := c.QueryInt("category_id")
+	minPrice := c.QueryFloat("min_price")
+	maxPrice := c.QueryFloat("max_price") // ✅ Ganti dari QueryInt ke QueryFloat
+	storeID := c.QueryInt("store_id")
+
 	var products []models.Product
-	// ✅ Gunakan Preload agar Store ikut dimuat
-	if err := db.Preload("Store").Find(&products).Error; err != nil {
+	var total int64
+
+	// 🔹 Query dasar
+	query := db.Model(&models.Product{})
+
+	// 🔹 Tambahkan filter jika ada query parameter
+	if name != "" {
+		query = query.Where("name LIKE ?", "%"+name+"%")
+	}
+	if categoryID > 0 {
+		query = query.Where("category_id = ?", categoryID)
+	}
+	if minPrice > 0 {
+		query = query.Where("price >= ?", minPrice)
+	}
+	if maxPrice > 0 {
+		query = query.Where("price <= ?", maxPrice)
+	}
+	if storeID > 0 {
+		query = query.Where("store_id = ?", storeID)
+	}
+
+	// ✅ Hitung total data yang sesuai filter
+	query.Count(&total)
+
+	// ✅ Ambil data dengan filter, pagination, dan preload store
+	if err := query.Preload("Store").Limit(limit).Offset(offset).Find(&products).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch products"})
 	}
 
-	return c.JSON(products)
+	// ✅ Response dengan metadata pagination
+	return c.JSON(fiber.Map{
+		"total":    total,
+		"page":     page,
+		"limit":    limit,
+		"products": products,
+	})
 }
+
 
 // 🔹 Update Produk (Hanya Pemilik Toko)
 func UpdateProduct(c *fiber.Ctx) error {

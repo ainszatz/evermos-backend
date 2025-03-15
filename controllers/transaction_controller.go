@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"time"
 	"evermos-backend/models"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -66,15 +67,63 @@ func GetTransactions(c *fiber.Ctx) error {
 	db := c.Locals("db").(*gorm.DB)
 	userID := c.Locals("user_id").(uint)
 
+	// ✅ Ambil query parameter untuk pagination
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * limit
+
+	// ✅ Ambil query parameter untuk filtering
+	productID := c.QueryInt("product_id")
+	startDate := c.Query("start_date") // Format: YYYY-MM-DD
+	endDate := c.Query("end_date")     // Format: YYYY-MM-DD
+
 	var transactions []models.Transaction
-	// ✅ Preload semua relasi yang diperlukan
-	if err := db.Preload("User.Store").Preload("Product.Store").
-		Where("user_id = ?", userID).Find(&transactions).Error; err != nil {
+	var total int64
+
+	// 🔹 Query dasar
+	query := db.Model(&models.Transaction{}).Where("user_id = ?", userID)
+
+	// 🔹 Tambahkan filter jika ada query parameter
+	if productID > 0 {
+		query = query.Where("product_id = ?", productID)
+	}
+	if startDate != "" {
+		parsedStartDate, err := time.Parse("2006-01-02", startDate)
+		if err == nil {
+			query = query.Where("created_at >= ?", parsedStartDate)
+		}
+	}
+	if endDate != "" {
+		parsedEndDate, err := time.Parse("2006-01-02", endDate)
+		if err == nil {
+			parsedEndDate = parsedEndDate.Add(24 * time.Hour) // Tambahkan satu hari agar filter mencakup seluruh hari
+			query = query.Where("created_at < ?", parsedEndDate)
+		}
+	}
+
+	// ✅ Hitung total transaksi sesuai filter
+	query.Count(&total)
+
+	// ✅ Ambil data dengan filter, pagination, dan preload
+	if err := query.Preload("User.Store").Preload("Product.Store").
+		Limit(limit).Offset(offset).
+		Find(&transactions).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch transactions"})
 	}
 
-	return c.JSON(transactions)
+	// ✅ Response dengan metadata pagination
+	return c.JSON(fiber.Map{
+		"total":       total,
+		"page":        page,
+		"limit":       limit,
+		"transactions": transactions,
+	})
 }
+
+
 
 
 
