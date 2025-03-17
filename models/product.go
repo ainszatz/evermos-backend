@@ -9,4 +9,5 @@ type Product struct {
 	Stock   int     `json:"stock" gorm:"not null"`
 	StoreID uint    `json:"store_id" gorm:"not null;index"`
 	Store   Store   `json:"store" gorm:"foreignKey:StoreID"`
+	ImageURL string `json:"image_url"`
 }

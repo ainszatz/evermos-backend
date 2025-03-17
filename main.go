@@ -41,6 +41,8 @@ func main() {
 	routes.ProductRoutes(app)
 	routes.TransactionRoutes(app)
 	routes.ProductLogRoutes(app)
+	routes.UploadRoutes(app)
+
 
 
 	app.Get("/", func(c *fiber.Ctx) error {

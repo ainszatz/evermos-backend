@@ -20,12 +20,12 @@ func AuthMiddleware(c *fiber.Ctx) error {
         return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
     }
 
-    // Hapus prefix "Bearer "
     if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
         tokenString = tokenString[7:]
     }
 
-    // Parsing token JWT
+    fmt.Println("JWT_SECRET:", os.Getenv("JWT_SECRET")) // Debugging secret key
+
     token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
         return []byte(os.Getenv("JWT_SECRET")), nil
     })
@@ -41,16 +41,15 @@ func AuthMiddleware(c *fiber.Ctx) error {
         return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid Token Claims"})
     }
 
-    // 🔹 Debugging: Print isi token claims
-    fmt.Println("Claims from JWT:", claims)
+    fmt.Println("Claims from JWT:", claims) // Debugging isi token
 
-    // 🔹 Ambil user_id dari claims dengan aman
     userIDRaw, exists := claims["user_id"]
     if !exists {
         fmt.Println("user_id is missing in token claims")
         return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid Token Claims"})
     }
 
+    // Jika user_id bertipe string di token
     userIDFloat, ok := userIDRaw.(float64)
     if !ok {
         fmt.Println("user_id is not a valid number")
@@ -60,11 +59,11 @@ func AuthMiddleware(c *fiber.Ctx) error {
     userID := uint(userIDFloat)
     fmt.Println("user_id set in Locals:", userID) // Debugging sukses
 
-    // Simpan user_id ke Fiber Locals
     c.Locals("user_id", userID)
 
     return c.Next()
 }
+
 
 
 // Function to generate JWT token

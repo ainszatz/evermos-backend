@@ -12,4 +12,5 @@ type User struct {
 	Password string `json:"-" gorm:"not null"`
 	Role     string `json:"role" gorm:"default:user"` // default user, bisa diubah ke "admin"
 	Store    Store  `json:"store" gorm:"foreignKey:UserID"`
+	Avatar   string `json:"avatar"`
 }
